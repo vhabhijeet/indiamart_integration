@@ -7,7 +7,7 @@ import requests
 
 @frappe.whitelist()
 def add_source_lead():
-	lead_sources = ['Indiamart - Call', 'Indiamart - Buy Lead','Indiamart - Direct' ]
+	lead_sources = ['Indiamart - Call', 'Indiamart - Buy Lead', 'Indiamart - Direct', 'Indiamart - Whatsapp', 'Indiamart Catalogue']
 	for type in lead_sources:
 		if not frappe.db.exists(type):
 			doc=frappe.get_doc(dict(
@@ -73,11 +73,11 @@ def cron_sync_lead():
 
 @frappe.whitelist()
 def add_lead(lead_data):
-	qtype_map = {'P' : 'Indiamart - Call', 'B' : 'Indiamart - Buy Lead', 'W' : 'Indiamart - Direct'}
+	qtype_map = {'P' : 'Indiamart - Call', 'B' : 'Indiamart - Buy Lead', 'W' : 'Indiamart - Direct', 'BIZ' : 'Indiamart Catalogue', 'WA' : 'Indiamart - Whatsapp', 'V' : 'Indiamart - Buy Lead'}
 	try:
-		if not (frappe.db.exists("Lead",{"india_mart_id":lead_data["UNIQUE_QUERY_ID"]}) or frappe.db.exists("Lead",{"email_id":lead_data["SENDER_EMAIL"]})):
+		if not (frappe.db.exists("Lead",{"indiamart_uid":lead_data["UNIQUE_QUERY_ID"]}) or frappe.db.exists("Lead",{"email_id":lead_data["SENDER_EMAIL"]})):
 			lead_data = dict(lead_data)
-			title,lead_name,email_id,mobile_no,company_name,address_line1,city,state,note,phone = [lead_data.get('SENDER_COMPANY') if lead_data.get('SENDER_COMPANY') else lead_data.get('SENDER_NAME'),lead_data.get("SENDER_NAME"),lead_data.get("SENDER_EMAIL"),lead_data.get("SENDER_MOBILE")[-10:],lead_data.get('SENDER_COMPANY'),lead_data.get('SENDER_ADDRESS'),lead_data.get('SENDER_CITY'),lead_data.get('SENDER_STATE'),lead_data.get('QUERY_MESSAGE') + "\n" + lead_data.get('QUERY_PRODUCT_NAME') + "\n" + lead_data.get('CALL_DURATION') + "\n" + lead_data.get('RECEIVER_MOBILE') + "\n" + lead_data.get('SENDER_EMAIL_ALT') + "\n" + lead_data.get('UNIQUE_QUERY_ID'),lead_data.get('SENDER_MOBILE_ALT')[-10:]]
+			title,lead_name,email_id,mobile_no,company_name,address_line1,city,state,note,enq_product_name,indiamart_uid,custom_indiamart_datetime,phone = [lead_data.get('SENDER_COMPANY') if lead_data.get('SENDER_COMPANY') else lead_data.get('SENDER_NAME'),lead_data.get("SENDER_NAME"),lead_data.get("SENDER_EMAIL"),lead_data.get("SENDER_MOBILE")[-10:],lead_data.get('SENDER_COMPANY'),lead_data.get('SENDER_ADDRESS'),lead_data.get('SENDER_CITY'),lead_data.get('SENDER_STATE'),lead_data.get('QUERY_MESSAGE'),lead_data.get('QUERY_PRODUCT_NAME'),lead_data.get('UNIQUE_QUERY_ID'),lead_data.get('QUERY_TIME'),lead_data.get('SENDER_MOBILE_ALT')[-10:]]
 			doc = frappe.get_doc({
 				'doctype' : "Lead",
 				'title' : title,
@@ -96,11 +96,12 @@ def add_lead(lead_data):
 					}
 					],
 				'phone' : phone,
-				'status' : 'Lead',
+				'status' : 'Open',
 				'source' : qtype_map[lead_data.get("QUERY_TYPE")],
-				'india_mart_id':lead_data.get("UNIQUE_QUERY_ID")
+				'enq_product_name': enq_product_name,
+				'custom_indiamart_datetime' : custom_indiamart_datetime,
+				'indiamart_uid': indiamart_uid
 			}).insert(ignore_permissions = True)
 			return doc
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback())
-
